@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
 use crate::state::{State, STATE};
 
 // version info for migration info
@@ -29,6 +29,8 @@ pub fn instantiate(
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
         .add_attribute("count", msg.count.to_string()))
+
+    // OK(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -74,6 +76,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 fn query_count(deps: Deps) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
+}
+
+fn query_owner(msg: QueryMsg, info: MessageInfo,) -> StdResult<OwnerResponse> {
+   match msg {
+    QueryMsg::GetOwner {} -> info.owner.clone();
+   }
+   OK(OwnerResponse {owner: info.owner.clone()})
 }
 
 #[cfg(test)]

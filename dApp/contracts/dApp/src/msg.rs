@@ -6,15 +6,15 @@ use cosmwasm_std::Addr;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub count: i32,
-    // pub owner: Addr,
+    pub owner: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg { 
     Increment {},
     Reset { count: i32 },
-    UpdateOwner {new_owner: String},
+    UpdateOwner { owner: Addr},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -33,5 +33,5 @@ pub struct CountResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OwnerResponse {
-    pub owner_address: Addr,
+    pub owner: Addr,
 }

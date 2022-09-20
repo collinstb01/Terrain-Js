@@ -43,13 +43,13 @@ pub fn execute(
     match msg {
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
-        ExecuteMsg::UpdateOwner { new_owner } => try_update(deps, new_owner)
+        ExecuteMsg::UpdateOwner { owner } => try_update(deps, owner)
     }
 }
 
-fn try_update(deps: DepsMut, new_owner: Addr) -> Result<Response, ContractError> {
+fn try_update(deps: DepsMut, owner: Addr) -> Result<Response, ContractError> {
     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.owner = new_owner;
+        state.owner = owner;
         Ok(state)
     });
     Ok(Response::new().add_attribute("method", "change owner" ))
@@ -79,7 +79,7 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg, info: MessageInfo,) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
-        QueryMsg::GetOwner {} => info.sender.clone(),
+        QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
     }
 }
 
@@ -87,6 +87,12 @@ fn query_count(deps: Deps,) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
 }
+
+fn query_owner(deps: Deps,) -> StdResult<OwnerResponse> {
+    let state = STATE.load(deps.storage)?;
+    Ok(OwnerResponse { owner: state.owner })
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -98,9 +104,8 @@ mod tests {
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { count: 17 };
         let info = mock_info("creator", &coins(1000, "earth"));
-
+        let msg = InstantiateMsg { count: 17 , owner: info};
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -115,9 +120,8 @@ mod tests {
     fn increment() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { count: 17 };
         let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let msg = InstantiateMsg { count: 17, owner: info };        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // beneficiary can release it
         let info = mock_info("anyone", &coins(2, "token"));
@@ -134,9 +138,10 @@ mod tests {
     fn reset() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { count: 17,  };
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let msg = InstantiateMsg { count: 17, owner:  info };
 
         // beneficiary can release it
         let unauth_info = mock_info("anyone", &coins(2, "token"));
@@ -154,9 +159,10 @@ mod tests {
 
         // should now be 5
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
+        let resOwner = query_owner(deps.as_ref(), mock_env(), QueryMsg::GetOwner {}).unwrap();
         let value: CountResponse = from_binary(&res).unwrap();
         assert_eq!(5, value.count);
     }
 
-    // fn new_owner() {}
+    // fn owner() {}
 }

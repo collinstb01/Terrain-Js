@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -43,7 +43,16 @@ pub fn execute(
     match msg {
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::UpdateOwner { new_owner } => try_update(deps, new_owner)
     }
+}
+
+fn try_update(deps: DepsMut, new_owner: Addr) -> Result<Response, ContractError> {
+    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+        state.owner = new_owner;
+        Ok(state)
+    });
+    Ok(Response::new().add_attribute("method", "change owner" ))
 }
 
 pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
@@ -67,22 +76,16 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg, info: MessageInfo,) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        QueryMsg::GetOwner {} => info.sender.clone(),
     }
 }
 
-fn query_count(deps: Deps) -> StdResult<CountResponse> {
+fn query_count(deps: Deps,) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
-}
-
-fn query_owner(msg: QueryMsg, info: MessageInfo,) -> StdResult<OwnerResponse> {
-   match msg {
-    QueryMsg::GetOwner {} -> info.owner.clone();
-   }
-   OK(OwnerResponse {owner: info.owner.clone()})
 }
 
 #[cfg(test)]
@@ -131,7 +134,7 @@ mod tests {
     fn reset() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { count: 17 };
+        let msg = InstantiateMsg { count: 17,  };
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -154,4 +157,6 @@ mod tests {
         let value: CountResponse = from_binary(&res).unwrap();
         assert_eq!(5, value.count);
     }
+
+    // fn new_owner() {}
 }

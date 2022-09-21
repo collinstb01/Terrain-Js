@@ -27,37 +27,41 @@ pub fn instantiate(
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        .add_attribute("opponent", msg.opponent.to_string())
+        // .add_attribute("opponent", msg.opponent.to_string())
         .add_attribute("owner", info.sender.clone()))
     // OK(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: Deps,
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StartGame { opponent } => try_start_game(deps),
+        ExecuteMsg::StartGame {  opponent } => try_start_game(deps, info, &opponent),
     }
 }
 
-pub fn try_start_game(deps: Deps, info: MessageInfo, opponent: String) -> Result<Response, ContractError> {
+pub fn try_start_game(deps: Deps, info: MessageInfo, opponent: &str) -> Result<Response, ContractError> {
 
-    let rec: String = deps.api.addr_validate(opponent)?;
+    let rec: Addr = deps.api.addr_validate(opponent)?;
 
     Ok(Response::new().add_attribute("method", "validate"))
 }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(not(feature = "library"), entry_point)]
 // pub fn query(deps: Deps, _env: Env, msg: QueryMsg,) -> StdResult<Binary> {
 //     match msg {
-//         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+//         QueryMsg::GetOpenent {} => to_binary(&query_opponent(deps)?),
 //     }
 // }
 
+pub fn query_opponent(deps: Deps) -> Result<Response, ContractError> {
+    // STATE.load(deps, )
+    Ok(Response::new().add_attribute("method", "Queried Successfully"))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,13 +86,8 @@ mod tests {
         let msg = InstantiateMsg { opponent: "info".to_string() };
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+        // let rec: Addr = deps.api.addr_validate(msg.opponent);
 
-        // // beneficiary can release it
-        // let info = mock_info("anyone", &coins(2, "token"));
-        // let msg = ExecuteMsg::Increment {};
-        // let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // // should increase counter by 1
     }
 
     // fn owner() {}

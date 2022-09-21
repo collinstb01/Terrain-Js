@@ -6,8 +6,8 @@ use cw_storage_plus::Item;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
-    opponent: String,
-    owner: Addr,
+    pub opponent: String,
+    pub owner: Addr,
 }
 
 pub const STATE: Item<State> = Item::new("state");

@@ -1,0 +1,19 @@
+'''
+How to validate an address
+
+Addresses are typically base32 encoded. But for multichain smart contracts no assumptions
+should be made other than being UTF-8 encoded and of reasonable length
+
+'''
+let checked: Addr = deps.api.addr_validate(input)?;
+
+let rec: Addr = deps.api.addr_validate(rec_address)?;
+
+Balance.update(
+    deps.storage,
+    &rec,
+    | banlance: Option<Uint128> | -> StdResult< > {
+        Ok(balance.unwrap_or_default() + amount)
+    },
+)?;
+

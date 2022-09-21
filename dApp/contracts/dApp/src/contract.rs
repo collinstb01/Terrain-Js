@@ -105,7 +105,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let info = mock_info("creator", &coins(1000, "earth"));
-        let msg = InstantiateMsg { count: 17 , owner: info};
+        let msg = InstantiateMsg { count: 17 , owner: info.sender.clone()};
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -139,9 +139,9 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let msg = InstantiateMsg { count: 17, owner:  info };
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // beneficiary can release it
         let unauth_info = mock_info("anyone", &coins(2, "token"));

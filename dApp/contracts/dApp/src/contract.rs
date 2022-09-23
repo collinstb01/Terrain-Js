@@ -2,10 +2,11 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
 use cw2::set_contract_version;
+use schemars::_serde_json::Result;
 
 use crate::error::ContractError;
 use crate::msg::{OpenentResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::state::{State, STATE, ENTRIES};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:dApp";
@@ -40,15 +41,46 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StartGame {  opponent } => try_start_game(deps, info, &opponent),
+        ExecuteMsg::EnterRaffle { entry_address } => try_enter_raffle(deps, info, entry_address),
     }
 }
 
-pub fn try_start_game(deps: Deps, info: MessageInfo, opponent: &str) -> Result<Response, ContractError> {
+pub fn try_enter_raffle(deps: Deps, info: MessageInfo, entry_address: String) {
+    // 
+    // check if user is the owner
+    // if not the owner, check to make sure the entry_address = info.sender
+    // verify address and the user address 
+    // 
 
-    let rec: Addr = deps.api.addr_validate(opponent)?;
+    let address = deps.api.add_attribute(entry_address)?;
 
-    Ok(Response::new().add_attribute("method", "validate"))
+    let increment_entry = |nums_data: Option<u8> | -> StdResult<Response, ContractError> {
+        nums_data + 1;
+    };
+
+let state = STATE.load(deps.storage)?;
+    if info.sender == address {
+        return Err(ContractError::Unauthorized {});
+          if  info.sender != state.owner {
+            return Err(ContractError::Unauthorized {});
+       } else {
+        match ENTRIES.may_load(deps.storage, &address)? {
+            None =>ENTRIES.save(&mut deps.storage, &address, 1) ,
+            Some(value) => ENTRIES.update(&mut deps.storage, &address, increment_entry)?
+        }
+            // add address to entries
+       }
+    } else {
+    //    if  info.sender != state.owner {
+    //         return Err(ContractError::Unauthorized {});
+    //    } else {
+    //     match ENTRIES.may_load(deps.storage, &address)? {
+    //         None =>ENTRIES.save(deps.storage, &address, 1) ,
+    //         Some(value) => ENTRIES.update(deps.storage, &address, increment_entry)
+    //     }
+    //         // add address to entries
+    //    }
+
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -58,7 +90,7 @@ pub fn try_start_game(deps: Deps, info: MessageInfo, opponent: &str) -> Result<R
 //     }
 // }
 
-pub fn query_opponent(deps: Deps) -> Result<Response, ContractError> {
+pub fn query_opponent(deps: Deps) -> StdResult<Binary> {
     // STATE.load(deps, )
     Ok(Response::new().add_attribute("method", "Queried Successfully"))
 }
@@ -66,7 +98,7 @@ pub fn query_opponent(deps: Deps) -> Result<Response, ContractError> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{coins};
 
     #[test]
     fn proper_initialization() {
@@ -89,6 +121,4 @@ mod tests {
         // let rec: Addr = deps.api.addr_validate(msg.opponent);
 
     }
-
-    // fn owner() {}
 }

@@ -1,15 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use schemars::_serde_json::Result;
 
 use crate::error::ContractError;
-use crate::msg::{OpenentResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE, ENTRIES};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::state::{State, ENTRIES, STATE};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:dApp";
+const CONTRACT_NAME: &str = "crates.io:my_terra_dapp";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -20,7 +19,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     let state = State {
-        opponent: msg.opponent,
         owner: info.sender.clone(),
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -28,97 +26,100 @@ pub fn instantiate(
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        // .add_attribute("opponent", msg.opponent.to_string())
-        .add_attribute("owner", info.sender.clone()))
-    // OK(Response::default())
+        .add_attribute("owner", info.sender))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: Deps,
+    deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::EnterRaffle { entry_address } => try_enter_raffle(deps, info, entry_address),
+        ExecuteMsg::EnterRaffle { entry_address } => try_enter_raffle(entry_address, info, deps),
+        // ExecuteMsg::StartGame {} => try_start_game(),
     }
 }
 
-pub fn try_enter_raffle(deps: Deps, info: MessageInfo, entry_address: String) {
-    // 
-    // check if user is the owner
-    // if not the owner, check to make sure the entry_address = info.sender
-    // verify address and the user address 
-    // 
+// pub fn try_start_game() {}
 
-    let address = deps.api.add_attribute(entry_address)?;
-
-    let increment_entry = |nums_data: Option<u8> | -> StdResult<Response, ContractError> {
-        nums_data + 1;
+pub fn try_enter_raffle(
+    entry_address: String,
+    info: MessageInfo,
+    deps: DepsMut,
+) -> Result<Response, ContractError> {
+    let update_storage = |d| -> Result<Response, ContractError> {
+        Ok(Response::new().add_attribute("sss", "value"))
+        // Ok(())?
     };
+    let address = deps.api.addr_validate(&entry_address)?;
+    let state = STATE.load(deps.storage)?;
 
-let state = STATE.load(deps.storage)?;
-    if info.sender == address {
-        return Err(ContractError::Unauthorized {});
-          if  info.sender != state.owner {
+    if info.sender == entry_address {
+        if info.sender != state.owner {
             return Err(ContractError::Unauthorized {});
-       } else {
-        match ENTRIES.may_load(deps.storage, &address)? {
-            None =>ENTRIES.save(&mut deps.storage, &address, 1) ,
-            Some(value) => ENTRIES.update(&mut deps.storage, &address, increment_entry)?
+        } else {
+            match ENTRIES.may_load(deps.storage, &address)? {
+                Some(value) => ENTRIES.update(deps.storage, &address, update_storage),
+                None => ENTRIES.save(deps.storage, &address, &1),
+            }
         }
-            // add address to entries
-       }
     } else {
-    //    if  info.sender != state.owner {
-    //         return Err(ContractError::Unauthorized {});
-    //    } else {
-    //     match ENTRIES.may_load(deps.storage, &address)? {
-    //         None =>ENTRIES.save(deps.storage, &address, 1) ,
-    //         Some(value) => ENTRIES.update(deps.storage, &address, increment_entry)
-    //     }
-    //         // add address to entries
-    //    }
-
+        return Err(ContractError::Unauthorized {});
+    }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-// pub fn query(deps: Deps, _env: Env, msg: QueryMsg,) -> StdResult<Binary> {
+// pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
+//     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+//         state.count += 1;
+//         Ok(state)
+//     })?;
+
+//     Ok(Response::new().add_attribute("method", "try_increment"))
+// }
+
+// pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+//     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+//         if info.sender != state.owner {
+//             return Err(ContractError::Unauthorized {});
+//         }
+//         state.count = count;
+//         Ok(state)
+//     })?;
+//     Ok(Response::new().add_attribute("method", "reset"))
+// }
+
+// #[cfg_attr(not(feature = "library"), entry_point)]
+// pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 //     match msg {
-//         QueryMsg::GetOpenent {} => to_binary(&query_opponent(deps)?),
+//         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
 //     }
 // }
 
-pub fn query_opponent(deps: Deps) -> StdResult<Binary> {
-    // STATE.load(deps, )
-    Ok(Response::new().add_attribute("method", "Queried Successfully"))
-}
+// fn query_count(deps: Deps) -> StdResult<CountResponse> {
+//     let state = STATE.load(deps.storage)?;
+//     Ok(CountResponse { count: state.count })
+// }
 #[cfg(test)]
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins};
+    use cosmwasm_std::{coins, from_binary};
 
     #[test]
     fn proper_initialization() {
-        // let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        // let info = mock_info("creator", &coins(1000, "earth"));
-        // let msg = InstantiateMsg { opponent: "address".to_string() };
-        // // we can just call .unwrap() to assert this was a success
-        // let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-    }
-
-    #[test]
-    fn check_if_valid_addr() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let info = mock_info("creator", &coins(1000, "earth"));
 
-        let info = mock_info("creator", &coins(2, "token"));
-        let msg = InstantiateMsg { opponent: "info".to_string() };
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let msg = InstantiateMsg {};
 
-        // let rec: Addr = deps.api.addr_validate(msg.opponent);
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+        // it worked, let's query the state
+        // let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
+        // let value: CountResponse = from_binary(&res).unwrap();
+        // assert_eq!(17, value.count);
     }
 }

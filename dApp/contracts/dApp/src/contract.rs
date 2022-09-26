@@ -7,7 +7,7 @@ use cw2::set_contract_version;
 use schemars::_serde_json::value;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, OwnerResponse, QueryMsg};
 use crate::state::{State, ENTRIES, STATE};
 
 // version info for migration info
@@ -54,7 +54,7 @@ pub fn try_enter_raffle(
     let update_storage = |d: Option<i32>| -> Result<i32, ContractError> {
         match d {
             Some(value) => Ok(value + 1),
-            None => Ok(8),
+            None => Ok(1),
         }
     };
     let address = deps.api.addr_validate(&entry_address)?;
@@ -91,17 +91,20 @@ pub fn try_enter_raffle(
 //     Ok(Response::new().add_attribute("method", "reset"))
 // }
 
-// #[cfg_attr(not(feature = "library"), entry_point)]
-// pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-//     match msg {
-//         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
-//     }
-// }
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetOwners {} => to_binary(&query_owner(deps)?),
+    }
+}
 
-// fn query_count(deps: Deps) -> StdResult<CountResponse> {
-//     let state = STATE.load(deps.storage)?;
-//     Ok(CountResponse { count: state.count })
-// }
+fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
+    let state = STATE.load(deps.storage)?;
+    Ok(OwnerResponse {
+        owners: state.owner,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

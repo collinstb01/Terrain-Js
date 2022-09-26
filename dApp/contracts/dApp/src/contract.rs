@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -30,27 +32,17 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<()> {
     match msg {
         ExecuteMsg::EnterRaffle { entry_address } => try_enter_raffle(entry_address, info, deps),
         // ExecuteMsg::StartGame {} => try_start_game(),
     }
 }
-
 // pub fn try_start_game() {}
 
-pub fn try_enter_raffle(
-    entry_address: String,
-    info: MessageInfo,
-    deps: DepsMut,
-) -> Result<Response, ContractError> {
-    let update_storage = |d| -> Result<Response, ContractError> {
-        Ok(Response::new().add_attribute("sss", "value"))
+pub fn try_enter_raffle(entry_address: String, info: MessageInfo, deps: DepsMut) -> StdResult<()> {
+    let update_storage = |d| -> StdResult<()> {
+        8
         // Ok(())?
     };
     let address = deps.api.addr_validate(&entry_address)?;
@@ -58,15 +50,15 @@ pub fn try_enter_raffle(
 
     if info.sender == entry_address {
         if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
+            return;
         } else {
             match ENTRIES.may_load(deps.storage, &address)? {
-                Some(value) => ENTRIES.update(deps.storage, &address, update_storage),
-                None => ENTRIES.save(deps.storage, &address, &1),
+                Some(_) => ENTRIES.update(deps.storage, &address, update_storage)?,
+                None => ENTRIES.save(deps.storage, &address, &1)?,
             }
         }
     } else {
-        return Err(ContractError::Unauthorized {});
+        return;
     }
 }
 

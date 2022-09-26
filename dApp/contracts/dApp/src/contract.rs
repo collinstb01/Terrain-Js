@@ -1,9 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
+use schemars::_serde_json::value;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -32,7 +33,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<()> {
+pub fn execute(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::EnterRaffle { entry_address } => try_enter_raffle(entry_address, info, deps),
         // ExecuteMsg::StartGame {} => try_start_game(),
@@ -40,26 +46,29 @@ pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> 
 }
 // pub fn try_start_game() {}
 
-pub fn try_enter_raffle(entry_address: String, info: MessageInfo, deps: DepsMut) -> StdResult<()> {
-    let update_storage = |d| -> StdResult<()> {
-        8
-        // Ok(())?
+pub fn try_enter_raffle(
+    entry_address: String,
+    info: MessageInfo,
+    deps: DepsMut,
+) -> Result<Response, ContractError> {
+    let update_storage = |d: Option<i32>| -> Result<i32, ContractError> {
+        match d {
+            Some(value) => Ok(value + 1),
+            None => Ok(8),
+        }
     };
     let address = deps.api.addr_validate(&entry_address)?;
     let state = STATE.load(deps.storage)?;
 
     if info.sender == entry_address {
         if info.sender != state.owner {
-            return;
         } else {
-            match ENTRIES.may_load(deps.storage, &address)? {
-                Some(_) => ENTRIES.update(deps.storage, &address, update_storage)?,
-                None => ENTRIES.save(deps.storage, &address, &1)?,
-            }
+            ENTRIES.update(deps.storage, &address, update_storage)?;
         }
     } else {
-        return;
+        ENTRIES.update(deps.storage, &address, update_storage)?;
     }
+    Ok(Response::new().add_attribute("some", "value"))
 }
 
 // pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {

@@ -26,7 +26,7 @@ pub struct Start {
     pub opponent: Addr,
     pub host_move: GameMove, // enum GameMove { Rock, Paper, Scissors }
     pub opp_move: GameMove,
-    pub result: GameResult,
+    // pub result: GameResult,
 }
 
 pub const STATE: Item<State> = Item::new("state");

@@ -27,5 +27,5 @@ pub struct OpenentResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OwnerResponse {
-    pub owners: Addr,
+    pub owners: i32,
 }

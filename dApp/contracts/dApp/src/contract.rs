@@ -92,17 +92,19 @@ pub fn try_enter_raffle(
 // }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg, info: MessageInfo) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetOwners {} => to_binary(&query_entries(deps, info)?),
+        QueryMsg::GetOwners {} => to_binary(&query_owner(deps)?),
     }
 }
 
 // Funcs for Query
 
-fn query_entries(deps: Deps, info: MessageInfo) -> StdResult<OwnerResponse> {
-    let state = ENTRIES.load(deps.storage, &info.sender)?;
-    Ok(OwnerResponse { owners: state })
+fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
+    let state = STATE.load(deps.storage)?;
+    Ok(OwnerResponse {
+        owners: state.owner,
+    })
 }
 
 #[cfg(test)]
@@ -131,13 +133,13 @@ mod tests {
     fn try_enter_raffle() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
         let info = mock_info("creator", &coins(1000, "earth"));
+
         let msg = InstantiateMsg {};
 
         let address = deps.api.addr_validate("jayden").unwrap();
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetOwners {}, info).unwrap();
-
-        let value: OwnerResponse = from_binary(&res).unwrap();
+        let state = ENTRIES.load(&deps.storage, &address).unwrap();
 
         ExecuteMsg::EnterRaffle {
             entry_address: "Hello".to_string(),
@@ -145,9 +147,7 @@ mod tests {
 
         let state2 = ENTRIES.load(&deps.storage, &address).unwrap();
 
-        let value2: OwnerResponse = from_binary(&res).unwrap();
-
-        assert_ne!(value.owners, value2.owners);
+        assert_eq!(state, state2);
 
         // let address = deps.api.addr_validate()?;
 
